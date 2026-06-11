@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DigiQuest: IT Motion Hero | เกมผู้กล้าล่าไอที</title>
+    
+    <!-- Google Fonts: Outfit (EN) & Sarabun (TH) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Sarabun:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Link Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- MediaPipe Libraries for WebCam Hand Tracking -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div id="app-container">
+        <!-- LOBBY SCREEN -->
+        <section id="lobby-screen" class="screen active">
+            <div class="glass-panel main-lobby">
+                <div class="brand-header animate-pop">
+                    <span class="badge">Active Learning Gamification</span>
+                    <h1>DIGIQUEST</h1>
+                    <h2>IT MOTION HERO <span class="accent-text">ผู้กล้าล่าไอที</span></h2>
+                    <p class="tagline">เรียนรู้เทคโนโลยีดิจิทัลผ่านการเคลื่อนไหวร่างกายแสนสนุก! 🎮✨</p>
+                </div>
+
+                <div class="lobby-content">
+                    <!-- Stage Select -->
+                    <div class="stage-section">
+                        <h3><span class="icon">🚀</span> เลือกภารกิจตะลุยด่าน</h3>
+                        <div class="stages-grid" id="stages-grid">
+                            <!-- Stage Cards will be rendered dynamically by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Sidebar Info -->
+                    <div class="sidebar-section">
+                        <!-- Instructions / How to Play -->
+                        <div class="lobby-card card-instructions">
+                            <h4><span class="icon">💡</span> วิธีการเล่น</h4>
+                            <ol>
+                                <li>ยืนห่างจากกล้องเว็บแคมประมาณ 1-1.5 เมตร</li>
+                                <li>ยกมือขึ้นและใช้ <strong>"ปลายนิ้วชี้"</strong> ควบคุมตัวชี้สีทองบนหน้าจอ</li>
+                                <li>ชี้ค้างไว้ที่ตัวเลือกคำตอบที่ถูกต้องเป็นเวลา 1.5 วินาทีเพื่อเลือกคำตอบ</li>
+                                <li>หากไม่มีกล้อง สามารถใช้ <strong>"เมาส์"</strong> ชี้ค้างเพื่อเล่นแทนได้!</li>
+                            </ol>
+                        </div>
+
+                        <!-- Leaderboard Preview -->
+                        <div class="lobby-card card-leaderboard">
+                            <h4><span class="icon">🏆</span> กระดานผู้นำสูงสุด</h4>
+                            <div class="leaderboard-list" id="lobby-leaderboard-list">
+                                <!-- Top scores will be rendered by JS -->
+                                <div class="no-score">ยังไม่มีคะแนนบันทึก</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="lobby-actions">
+                    <button id="btn-how-to-play" class="btn btn-secondary">
+                        <span class="icon">📖</span> คู่มืออย่างละเอียด
+                    </button>
+                    <button id="btn-calibration-lobby" class="btn btn-primary">
+                        <span class="icon">📷</span> ตั้งค่าเว็บแคม
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- CALIBRATION / SETUP SCREEN -->
+        <section id="calibration-screen" class="screen">
+            <div class="glass-panel calibration-panel">
+                <h2><span class="icon">📷</span> ตั้งค่ากล้องเว็บแคม</h2>
+                <p class="description">กรุณาจัดระดับกล้องเพื่อให้มองเห็นร่างกายและมือได้อย่างชัดเจน เพื่อความแม่นยำในการเล่น</p>
+                
+                <div class="calibration-area">
+                    <!-- Mirror Canvas of Camera -->
+                    <div class="video-container">
+                        <canvas id="calibration-canvas"></canvas>
+                        <div class="calibration-overlay-grid"></div>
+                        <div class="status-indicator-badge" id="camera-status-badge">
+                            <span class="dot blinking"></span>
+                            <span class="text">กำลังเปิดใช้งานกล้อง...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="calibration-controls">
+                        <div class="settings-group">
+                            <label>ระบบควบคุมสำรอง (หากกล้องใช้งานไม่ได้):</label>
+                            <div class="toggle-control">
+                                <span class="toggle-label">โหมดควบคุมด้วยเมาส์ (Mouse Mode)</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="mouse-mode-toggle">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="calibration-tips">
+                            <h4><span class="accent-text">💡 คำแนะนำเพื่อการตรวจจับที่ดี:</span></h4>
+                            <ul>
+                                <li>จัดให้มีแสงสว่างในห้องเพียงพอ</li>
+                                <li>หลีกเลี่ยงการมีคนอื่นหรือสิ่งของรบกวนในพื้นหลัง</li>
+                                <li>ทดลองชูมือขึ้นและขยับเพื่อให้เห็นพอยน์เตอร์สีทองบนหน้าจอ</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="btn-back-to-lobby" class="btn btn-secondary">ย้อนกลับ</button>
+                    <button id="btn-start-from-calibration" class="btn btn-success" disabled>
+                        เข้าสู่เกมการเล่น <span class="icon">🎮</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- GAMEPLAY SCREEN -->
+        <section id="game-screen" class="screen">
+            <!-- Hidden webcam video element (used for pipeline input) -->
+            <video id="webcam-video" playsinline style="display: none;"></video>
+            
+            <!-- Background mirror canvas for camera and drawing tracking points -->
+            <canvas id="game-canvas"></canvas>
+
+            <!-- Gameplay UI Overlay (HUD) -->
+            <div class="game-hud">
+                <!-- Top Status Bar -->
+                <div class="hud-top-bar glass-panel-compact">
+                    <!-- Left: Stats -->
+                    <div class="hud-left">
+                        <div class="hud-item score-display">
+                            <span class="label">คะแนน:</span>
+                            <span class="val" id="hud-score-val">0</span>
+                        </div>
+                        <div class="hud-item timer-display">
+                            <span class="label">เวลาเหลือ:</span>
+                            <span class="val" id="hud-time-val">0 นาที 30 วินาที</span>
+                        </div>
+                    </div>
+
+                    <!-- Center: Stage Banner -->
+                    <div class="hud-center">
+                        <div class="stage-badge-current" id="hud-stage-name">ด่านหลัก</div>
+                    </div>
+
+                    <!-- Right: Lives & Utility Buttons -->
+                    <div class="hud-right">
+                        <div class="hud-item lives-display" id="hud-lives-container">
+                            <!-- Hearts will be rendered here -->
+                        </div>
+                        <button id="btn-game-pause" class="btn btn-icon btn-pause" title="พักเกม">
+                            พักเกม
+                        </button>
+                        <button id="btn-game-quit" class="btn btn-icon btn-quit" title="ออกจากเกม">
+                            ออก
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Center UI: Question Card -->
+                <div class="question-container animate-slide-down">
+                    <div class="glass-panel question-card">
+                        <div class="question-header">
+                            <span class="q-number" id="hud-question-number">คำถามที่ 1/5</span>
+                        </div>
+                        <h2 class="question-text" id="hud-question-text">คำถามจะปรากฏที่นี่...</h2>
+                    </div>
+                </div>
+
+                <!-- Big Screen Notifications (Bonus Time, Correct, Incorrect alerts) -->
+                <div id="alert-banner" class="alert-banner">
+                    <span class="text">BONUS TIME! ⏰✨</span>
+                </div>
+                
+                <div id="bonus-countdown-alert" class="bonus-countdown-alert">
+                    เวลาโบนัส: <span id="bonus-seconds-val">8</span> วินาที
+                </div>
+
+                <!-- Floating Canvas Hotspots (Answers) are drawn dynamically on canvas, 
+                     but we can overlay HTML target overlays for smooth accessibility/click details if needed.
+                     To keep it super fluid and visually synced, we'll render targets directly on the interactive 
+                     canvas and overlay absolute elements for perfect click/touch support in mouse-fallback. -->
+                <div class="hud-targets-container" id="hud-targets-container">
+                    <!-- Interactive targets representing options A, B, C will be positioned here -->
+                </div>
+
+                <!-- Bottom Status / Control bar -->
+                <div class="hud-bottom-bar">
+                    <div class="camera-status-pill">
+                        <span class="indicator-dot" id="tracking-status-dot"></span>
+                        <span class="indicator-text" id="tracking-status-text">เมาส์คุมสำรอง</span>
+                    </div>
+
+                    <div class="media-controls">
+                        <!-- Camera Toggle -->
+                        <button id="btn-toggle-camera" class="btn btn-circular-control" title="เปิด/ปิดกล้อง">
+                            <svg class="svg-icon" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                            </svg>
+                        </button>
+                        <!-- Audio Toggle -->
+                        <button id="btn-toggle-audio" class="btn btn-circular-control" title="เปิด/ปิดเสียง">
+                            <svg class="svg-icon" viewBox="0 0 24 24" id="audio-icon-svg">
+                                <path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAUSE OVERLAY MODAL -->
+        <div id="pause-overlay" class="modal-overlay">
+            <div class="glass-panel modal-card animate-pop">
+                <h2>⏸️ พักเกมชั่วคราว</h2>
+                <p>เกมหยุดชั่วคราว คุณครูสามารถอธิบายเพิ่มเติมให้นักเรียนได้</p>
+                <div class="modal-actions">
+                    <button id="btn-resume-game" class="btn btn-primary">กลับเข้าสู่เกม</button>
+                    <button id="btn-restart-game" class="btn btn-secondary">เริ่มด่านใหม่</button>
+                    <button id="btn-exit-to-lobby" class="btn btn-danger">กลับหน้าหลัก (ออก)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME OVER / RESULTS SCREEN -->
+        <section id="game-over-screen" class="screen">
+            <div class="glass-panel game-over-panel animate-pop">
+                <h1 id="game-over-title">🎉 สำเร็จภารกิจ!</h1>
+                <h3 id="game-over-subtitle" class="accent-text">ด่าน 1: ฮาร์ดแวร์ vs ซอฟต์แวร์</h3>
+                
+                <!-- Stars Achievement -->
+                <div class="stars-container" id="stars-container">
+                    <span class="star active">★</span>
+                    <span class="star active">★</span>
+                    <span class="star">★</span>
+                </div>
+
+                <!-- Stats Summary -->
+                <div class="results-stats">
+                    <div class="stat-box">
+                        <span class="stat-label">คะแนนที่ทำได้</span>
+                        <span class="stat-value" id="res-score">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">หัวใจที่เหลือ</span>
+                        <span class="stat-value" id="res-lives">❤️❤️❤️</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">เวลาที่ใช้ไป</span>
+                        <span class="stat-value" id="res-time-spent">00:25</span>
+                    </div>
+                </div>
+
+                <!-- Leaderboard Entry Form -->
+                <div class="leaderboard-entry-card" id="leaderboard-entry-container">
+                    <h4>📝 บันทึกสถิตินักเรียนฮีโร่</h4>
+                    <div class="input-row">
+                        <input type="text" id="player-name-input" placeholder="พิมพ์ชื่อนักเรียน/กลุ่ม..." maxlength="15">
+                        <button id="btn-submit-score" class="btn btn-success">บันทึก</button>
+                    </div>
+                    <p class="hint">ใช้เพื่อประเมินผลความเข้าใจในชั้นเรียนและจัดอันดับ</p>
+                </div>
+
+                <!-- Actions -->
+                <div class="results-actions">
+                    <button id="btn-over-lobby" class="btn btn-secondary">กลับหน้าหลัก</button>
+                    <button id="btn-over-retry" class="btn btn-primary">เล่นใหม่อีกครั้ง</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- DETAILED MANUAL MODAL -->
+        <div id="manual-overlay" class="modal-overlay">
+            <div class="glass-panel modal-card manual-card animate-pop">
+                <h2>📖 คู่มือนวัตกรรมและวิธีเล่นอย่างละเอียด</h2>
+                <div class="manual-content">
+                    <h3>1. แนวคิดและจุดเด่น (Gamification & Kinesthetic Learning)</h3>
+                    <p>เกมนี้เป็นสื่อการเรียนรู้แบบโต้ตอบที่นำแนวคิด <strong>Active Learning</strong> มาใช้ เพื่อให้นักเรียนขยับร่างกาย (Kinesthetic Learning) ในการตอบคำถาม ช่วยกระตุ้นสมอง ป้องกันอาการเบื่อหน่ายในชั้นเรียนวิชาคอมพิวเตอร์และเทคโนโลยี</p>
+                    
+                    <h3>2. การควบคุมด้วยการจับการเคลื่อนไหว (AI Motion Tracking)</h3>
+                    <p>ระบบจะตรวจจับ <strong>"ปลายนิ้วชี้"</strong> หรือฝ่ามือของผู้เล่นผ่านกล้องเว็บแคม เมื่อยกมือขึ้นหน้ากล้อง จะมีตัวชี้สีทองแสดงบนหน้าจอ หากคุณต้องการเลือกคำตอบใด ให้เลื่อนตัวชี้ไปทับปุ่มคำตอบนั้นไว้ วงกลมสีเหลืองขอบปุ่มจะเริ่มจับเวลาโหลด (Dwell Time) 1.5 วินาที เมื่อเต็มวงจะนับเป็นการกดยืนยัน</p>
+
+                    <h3>3. กติกาท้าทาย</h3>
+                    <ul>
+                        <li><strong>Time Attack:</strong> แต่ละข้อมีเวลาจำกัดในการคิดและเลือกคำตอบ (ข้อละ 15-20 วินาที) หากเวลาหมดจะเสียพลังชีวิต 1 ดวง</li>
+                        <li><strong>Bonus Time:</strong> หากตอบคำถามได้ถูกต้องรวดเร็วภายในเวลาโบนัส (8 วินาทีแรก) จะได้รับคะแนนพิเศษเพิ่มเติม!</li>
+                        <li><strong>พลังชีวิต (Hearts):</strong> เริ่มต้นด่านจะมีพลังชีวิต 3 หรือ 5 ดวง หากตอบผิดหรือหมดเวลา พลังชีวิตจะลดลง 1 ดวง เกมจะจบลงหากพลังชีวิตเหลือ 0</li>
+                        <li><strong>ระบบดาว (Stars):</strong> รับดาวประเมินผลสูงสุด 3 ดวงตามระดับผลการตอบคำถามและการรักษาพลังชีวิต</li>
+                    </ul>
+
+                    <h3>4. คำแนะนำสำหรับคุณครู</h3>
+                    <p>คุณครูสามารถใช้ตัวเลือก <strong>"พักเกม (Pause)"</strong> ด้านบนเพื่อหยุดอธิบายเสริมความรู้ให้นักเรียนในห้องได้ตลอดเวลา และยังสามารถสลับระหว่างการเล่นแบบตรวจจับความเคลื่อนไหว และการให้ตัวแทนนักเรียนมาถือเมาส์ไร้สายตอบคำถามด้วย <strong>โหมดเมาส์สำรอง</strong> ได้อีกด้วย</p>
+                </div>
+                <button id="btn-close-manual" class="btn btn-primary">ปิดคู่มือ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load JavaScript Modules -->
+    <script src="motion.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
